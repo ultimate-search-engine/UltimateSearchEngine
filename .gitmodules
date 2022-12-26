@@ -1,0 +1,27 @@
+[submodule "front-end"]
+	path = front-end
+	url = https://github.com/ultimate-search-engine/front-end.git
+[submodule "search-manager"]
+	path = search-manager
+	url = https://github.com/ultimate-search-engine/search-manager.git
+[submodule "suggester"]
+	path = suggester
+	url = https://github.com/ultimate-search-engine/suggester.git
+[submodule "FrontendCollection/front-end"]
+	path = FrontendCollection/front-end
+	url = https://github.com/ultimate-search-engine/front-end.git
+[submodule "FrontendCollection/search-manager"]
+	path = FrontendCollection/search-manager
+	url = https://github.com/ultimate-search-engine/search-manager.git
+[submodule "CrawlerCollection/crawler"]
+	path = CrawlerCollection/crawler
+	url = https://github.com/ultimate-search-engine/crawler.git
+[submodule "CrawlerCollection/page-scraper"]
+	path = CrawlerCollection/page-scraper
+	url = https://github.com/ultimate-search-engine/page-scraper.git
+[submodule "CrawlerCollection/pagerank"]
+	path = CrawlerCollection/pagerank
+	url = https://github.com/ultimate-search-engine/pagerank.git
+[submodule "SuggesterCollection"]
+	path = SuggesterCollection
+	url = https://github.com/ultimate-search-engine/SuggesterCollection.git

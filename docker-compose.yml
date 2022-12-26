@@ -1,0 +1,188 @@
+version: '3.4'
+services:
+  # Internet websites scrapping
+  page_scraper:
+    build:
+      context: ./CrawlerCollection
+      dockerfile: ./page-scraper/Dockerfile
+    container_name: scraper
+    tty: true
+    restart: always
+    networks:
+      - whole_network
+    ports:
+      - "8080:8080"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+  crawler:
+    tty: true
+    build:
+      context: ./CrawlerCollection
+      dockerfile: ./crawler/Dockerfile
+    container_name: crawler
+    environment:
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_USERNAME=production_user
+      - DB_PASSWORD=use235
+      - LIMIT=80000
+      - PS_HOST=page_scraper
+      - PS_PORT=8080
+    networks:
+      - whole_network
+    depends_on:
+      page_scraper:
+        condition: service_started
+  pagerank:
+    tty: true
+    build:
+      context: ./CrawlerCollection
+      dockerfile: './pagerank/Dockerfile'
+    container_name: pagerank
+    networks:
+      - whole_network
+    environment:
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_USERNAME=production_user
+      - DB_PASSWORD=use235
+      - ES_HOST=elasticsearch
+      - ES_PORT=9200
+    depends_on:
+      crawler:
+        condition: service_completed_successfully
+  mongodb:
+    tty: true
+    image: mongo:latest
+    container_name: mongodb
+    # command: tail -F anything
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: production_user
+      MONGO_INITDB_ROOT_PASSWORD: use235
+    healthcheck:
+      test: mongosh -p use235 -u production_user --quiet --eval 'db.getMongo().getDBNames().indexOf("ency") >= 0'
+      interval: 200s
+      timeout: 30s
+      start_period: 40s
+      retries: 10
+    networks:
+      - whole_network
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./CrawlerCollection/mongodb/dump:/dump
+      - ./CrawlerCollection/mongodb/init.sh:/docker-entrypoint-initdb.d/init.sh
+
+  # Suggester full collection
+  elasticsearch:
+    tty: true
+    image: elasticsearch:8.5.0
+    container_name: elasticsearch
+    restart: always
+    environment:
+      discovery.type: single-node
+      node.name: node-master
+      bootstrap.memory_lock: true
+      ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+      xpack.security.enabled: false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9200" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - whole_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+  suggester:
+    tty: true
+    build:
+      dockerfile: ./docker_builds/suggester/Dockerfile
+      context: ./SuggesterCollection
+    container_name: suggester
+    restart: always
+    environment:
+      ES_HOST: elasticsearch
+      ES_PORT: 9200
+      ENVIRONMENT: prod
+      FRONTEND: frontend
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - whole_network
+    ports:
+      - "8000:8000"
+    command: python3 -m uvicorn main:app --host 0.0.0.0 --reload
+  algorithm:
+    tty: true
+    build:
+      dockerfile: ./docker_builds/algorithm/Dockerfile
+      context: ./SuggesterCollection
+    container_name: algorithm
+    environment:
+      ES_HOST: elasticsearch
+      ES_PORT: 9200
+      ENVIRONMENT: prod
+      LIMIT: 30000
+    networks:
+      - whole_network
+    depends_on:
+      pagerank:
+        condition: service_completed_successfully
+    ports:
+      - "8001:8001"
+    command: python3 main.py
+
+  # FE and search manager
+  frontend:
+    tty: true
+    build:
+      context: ./FrontendCollection/front-end
+      dockerfile: ./Dockerfile
+      args:
+        - SUGGESTER_HOST=10.57.10.10
+        - SUGGESTER_PORT=8000
+        - SM_HOST=10.57.10.10
+        - SM_PORT=8081
+    ports:
+      - "80:80"
+    container_name: frontend
+    restart: always
+    depends_on:
+      search_manager:
+        condition: service_started
+    networks:
+      - whole_network
+  search_manager:
+    tty: true
+    build:
+      context: ./FrontendCollection/search-manager
+      dockerfile: ./Dockerfile
+    ports:
+      - "8081:8081"
+    container_name: search_manager
+    restart: always
+    environment:
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_USERNAME=production_user
+      - DB_PASSWORD=use235
+      - ES_HOST=elasticsearch
+      - ES_PORT=9200
+      - SM_PORT=8081
+    depends_on:
+      suggester:
+        condition: service_started
+    networks:
+      - whole_network
+
+networks:
+  whole_network:
+    driver: bridge
