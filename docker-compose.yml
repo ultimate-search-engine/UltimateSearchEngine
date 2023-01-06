@@ -147,9 +147,9 @@ services:
       context: ./FrontendCollection/front-end
       dockerfile: ./Dockerfile
       args:
-        - SUGGESTER_HOST=host.docker.internal
+        - SUGGESTER_HOST=10.57.10.10
         - SUGGESTER_PORT=80
-        - SM_HOST=host.docker.internal
+        - SM_HOST=10.57.10.10
         - SM_PORT=8081
     ports:
       - "800:800"
