@@ -131,6 +131,7 @@ services:
       ES_PORT: 9200
       ENVIRONMENT: prod
       LIMIT: 30000
+      NUMBER_OF_PROCESSES: 6
     networks:
       - whole_network
     depends_on:
