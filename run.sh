@@ -1,1 +1,1 @@
-nohup  git pull --recurse-submodules && git submodule update --remote && docker sytem prune --force && docker compose up -d &
+nohup  git pull --recurse-submodules && git submodule update --remote && docker system prune --force && docker compose up -d &
